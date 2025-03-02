@@ -1,10 +1,9 @@
 import { createClient } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import * as schema from './schema';
 
-// For local development, we'll use a local SQLite database
-// In production, you would use Turso or another database provider
+// SQLite database for local development only
 const client = createClient({
   url: process.env.DATABASE_URL || 'file:./local.db',
   authToken: process.env.DATABASE_AUTH_TOKEN,

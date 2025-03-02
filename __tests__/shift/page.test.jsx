@@ -7,8 +7,6 @@ jest.mock('@/lib/session', () => ({
   getCurrentUser: jest.fn(),
 }));
 
-jest.mock('@/components/logout-button', () => () => <button type="button">Logout</button>);
-
 jest.mock('next/link', () => ({ href, children }) => <a href={href}>{children}</a>);
 
 describe('ShiftPage', () => {
@@ -29,10 +27,10 @@ describe('ShiftPage', () => {
       screen.getByText('You have successfully logged in to the Shift Hub.')
     ).toBeInTheDocument();
 
-    // Check logout button
-    const logoutButton = screen.getByText('Logout');
-    expect(logoutButton).toBeInTheDocument();
-    expect(logoutButton.closest('button')).toHaveAttribute('type', 'button');
+    // Check navbar instruction text
+    expect(
+      screen.getByText('Use the navbar above to navigate to your account settings or log out.')
+    ).toBeInTheDocument();
 
     // Check card component
     expect(screen.getByText(/Welcome, testuser!/i).closest('.card')).toBeInTheDocument();

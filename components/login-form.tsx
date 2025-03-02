@@ -52,19 +52,12 @@ export default function LoginForm() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-
     const userError = validateUsername(username);
     const passError = validatePassword(password);
-
     setUsernameError(userError);
     setPasswordError(passError);
-
-    if (userError || passError) {
-      return;
-    }
-
+    if (userError || passError) return;
     setIsSubmitting(true);
-
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -76,9 +69,7 @@ export default function LoginForm() {
           password,
         }),
       });
-
       const data = await response.json();
-
       if (!response.ok) {
         if (data.error?._errors) {
           const errorMessage = data.error._errors[0];
@@ -89,12 +80,8 @@ export default function LoginForm() {
         setIsSubmitting(false);
         return;
       }
-
-      // Login successful
       toast.success(`Welcome back, ${data.user.username}!`);
       console.log('Login successful:', data.user);
-
-      // Redirect to shift page
       router.push('/shift');
     } catch (error) {
       console.error('Login error:', error);

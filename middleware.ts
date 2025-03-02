@@ -5,7 +5,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // If the user is not logged in and trying to access a protected route
-  if (!username && pathname.startsWith('/shift')) {
+  if (!username && (pathname.startsWith('/shift') || pathname.startsWith('/user'))) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
@@ -18,5 +18,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/register', '/shift/:path*'],
+  matcher: ['/', '/register', '/shift/:path*', '/user/:path*'],
 };
