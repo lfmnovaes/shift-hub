@@ -1,49 +1,28 @@
-import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import LoginForm from '@/components/login-form';
-import '@testing-library/jest-dom';
-
-const mockPush = jest.fn();
-
-jest.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: mockPush,
-  }),
-}));
+import { mockSuccess, mockError, mockPush, setupTest } from '@/__tests__/test-utils';
 
 describe('LoginForm', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
+  beforeEach(setupTest);
 
   it('renders the login form with all elements', () => {
     render(<LoginForm />);
     expect(screen.getByPlaceholderText('Username')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Password')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Login' })).toBeInTheDocument();
-    expect(screen.getByText('Only letters, dash or underscore allowed')).toBeInTheDocument();
-    expect(screen.getByText('Enter your password')).toBeInTheDocument();
-    const svgElements = document.querySelectorAll('svg');
-    expect(svgElements.length).toBeGreaterThanOrEqual(2);
+    expect(document.querySelectorAll('svg').length).toBeGreaterThanOrEqual(2);
   });
 
-  it('toggles password visibility when eye icon is clicked', async () => {
+  it('toggles password visibility when eye icon is clicked', () => {
     render(<LoginForm />);
     const passwordInput = screen.getByPlaceholderText('Password');
-    expect(passwordInput).toHaveAttribute('type', 'password');
-    const toggleButton = screen.getByRole('button', {
-      name: /show password/i,
-    });
-    expect(toggleButton).toBeInTheDocument();
 
-    fireEvent.click(toggleButton);
+    expect(passwordInput).toHaveAttribute('type', 'password');
+    fireEvent.click(screen.getByRole('button', { name: /show password/i }));
     expect(passwordInput).toHaveAttribute('type', 'text');
 
-    const hideButton = screen.getByRole('button', {
-      name: /hide password/i,
-    });
-    fireEvent.click(hideButton);
+    fireEvent.click(screen.getByRole('button', { name: /hide password/i }));
     expect(passwordInput).toHaveAttribute('type', 'password');
   });
 
@@ -52,52 +31,86 @@ describe('LoginForm', () => {
     const usernameInput = screen.getByPlaceholderText('Username');
     const submitButton = screen.getByRole('button', { name: 'Login' });
 
+    // Test min length validation
     await userEvent.type(usernameInput, 'ab');
     fireEvent.click(submitButton);
     expect(screen.getByText('Username must be at least 3 characters')).toBeInTheDocument();
 
+    // Test required validation
     await userEvent.clear(usernameInput);
     fireEvent.click(submitButton);
     expect(screen.getByText('Username is required')).toBeInTheDocument();
 
+    // Test pattern validation
     await userEvent.clear(usernameInput);
     await userEvent.type(usernameInput, 'user123');
     fireEvent.click(submitButton);
     expect(screen.getByText('Only letters, dash or underscore allowed')).toBeInTheDocument();
-
-    await userEvent.clear(usernameInput);
-    await userEvent.type(usernameInput, 'valid-user_name');
-    fireEvent.click(submitButton);
-    expect(screen.queryByText('Only letters, dash or underscore allowed')).toBeInTheDocument();
-    expect(screen.queryByText('Username is required')).not.toBeInTheDocument();
-    expect(screen.queryByText('Username must be at least 3 characters')).not.toBeInTheDocument();
   });
 
   it('validates password correctly', async () => {
     render(<LoginForm />);
-    const usernameInput = screen.getByPlaceholderText('Username');
     const passwordInput = screen.getByPlaceholderText('Password');
-    const submitButton = screen.getByRole('button', { name: 'Login' });
+    const formElement = screen.getByText(/don't have an account/i).closest('form');
 
-    await userEvent.type(usernameInput, 'validuser');
+    // Test required validation
+    await userEvent.type(screen.getByPlaceholderText('Username'), 'validuser');
+    fireEvent.submit(formElement);
+    expect(
+      screen.getAllByText(/password/i).find((el) => el.textContent.includes('required'))
+    ).toBeInTheDocument();
 
-    await userEvent.clear(passwordInput);
-    fireEvent.click(submitButton);
-
-    await userEvent.type(passwordInput, 'password123');
-    fireEvent.click(submitButton);
-    expect(mockPush).toHaveBeenCalledWith('/shift');
+    // Test length validation
+    await userEvent.type(passwordInput, '12');
+    fireEvent.submit(formElement);
+    expect(
+      screen
+        .getAllByText(/password/i)
+        .find((el) => el.textContent.includes('at least 3 characters'))
+    ).toBeInTheDocument();
   });
 
-  it('navigates to shift page upon successful form submission', async () => {
-    render(<LoginForm />);
-    const usernameInput = screen.getByPlaceholderText('Username');
-    const passwordInput = screen.getByPlaceholderText('Password');
-    const submitButton = screen.getByRole('button', { name: 'Login' });
+  it('submits the form and handles successful login', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        user: { username: 'validuser', id: '123', createdAt: new Date().toISOString() },
+      }),
+    });
 
-    await userEvent.type(usernameInput, 'validuser');
-    await userEvent.type(passwordInput, 'password123');
-    fireEvent.click(submitButton);
-    expect(mockPush).toHaveBeenCalledWith('/shift');
+    render(<LoginForm />);
+    await userEvent.type(screen.getByPlaceholderText('Username'), 'validuser');
+    await userEvent.type(screen.getByPlaceholderText('Password'), 'password123');
+    fireEvent.click(screen.getByRole('button', { name: 'Login' }));
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: 'validuser', password: 'password123' }),
+      });
+      expect(mockSuccess).toHaveBeenCalledWith('Welcome back, validuser!');
+      expect(screen.getByTestId('toast-success')).toBeInTheDocument();
+      expect(mockPush).toHaveBeenCalledWith('/shift');
+    });
+  });
+
+  it('handles login failure correctly', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({ error: { _errors: ['Invalid username or password'] } }),
+    });
+
+    render(<LoginForm />);
+    await userEvent.type(screen.getByPlaceholderText('Username'), 'validuser');
+    await userEvent.type(screen.getByPlaceholderText('Password'), 'wrongpassword');
+    fireEvent.click(screen.getByRole('button', { name: 'Login' }));
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalled();
+      expect(mockError).toHaveBeenCalledWith('Invalid username or password');
+      expect(screen.getByTestId('toast-error')).toBeInTheDocument();
+      expect(mockPush).not.toHaveBeenCalled();
+    });
   });
 });

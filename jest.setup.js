@@ -1,6 +1,9 @@
 // Import Jest DOM extensions
 import '@testing-library/jest-dom';
 
+// Import test utilities
+import { setupToastMock, setupRouterMock, setupFetchMock } from './__tests__/test-utils';
+
 // Mock Next.js navigation hooks
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -11,3 +14,8 @@ jest.mock('next/navigation', () => ({
   usePathname: () => '',
   useSearchParams: () => new URLSearchParams(),
 }));
+
+// Setup common mocks
+setupToastMock();
+setupRouterMock();
+setupFetchMock();

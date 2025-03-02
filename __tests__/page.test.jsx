@@ -1,32 +1,15 @@
-import React from 'react';
 import { render, screen } from '@testing-library/react';
 import LoginPage from '@/app/page';
-import '@testing-library/jest-dom';
 
-jest.mock('@/components/login-form', () => {
-  return function MockLoginForm() {
-    return <div data-testid="login-form-mock">Login Form</div>;
-  };
-});
-
-jest.mock('next/navigation', () => ({
-  useRouter: jest.fn(),
-}));
+jest.mock('@/components/login-form', () => () => (
+  <div data-testid="login-form-mock">Login Form</div>
+));
 
 describe('LoginPage', () => {
-  it('renders the login page with title', () => {
+  it('renders the login page with title and form', () => {
     render(<LoginPage />);
     expect(screen.getByText('Shift Hub Login')).toBeInTheDocument();
-  });
-
-  it('renders the LoginForm component', () => {
-    render(<LoginPage />);
     expect(screen.getByTestId('login-form-mock')).toBeInTheDocument();
-  });
-
-  it('renders within a card component', () => {
-    render(<LoginPage />);
-    const cardElement = screen.getByText('Shift Hub Login').closest('.card');
-    expect(cardElement).toBeInTheDocument();
+    expect(screen.getByText('Shift Hub Login').closest('.card')).toBeInTheDocument();
   });
 });
