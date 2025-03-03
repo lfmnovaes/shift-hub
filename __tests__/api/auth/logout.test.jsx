@@ -1,34 +1,14 @@
 import { NextResponse } from 'next/server';
-
-jest.mock('next/server', () => ({
-  NextResponse: {
-    json: jest.fn().mockImplementation(() => ({
-      status: 200,
-      headers: new Map(),
-      json: () => Promise.resolve({}),
-      cookies: { set: jest.fn() },
-    })),
-    redirect: jest.fn().mockImplementation(() => ({
-      status: 307,
-      headers: new Map(),
-      cookies: { set: jest.fn() },
-    })),
-  },
-}));
-
-// Mock the Request constructor
-global.Request = jest.fn().mockImplementation((url) => ({ url }));
-
-// Mock URL constructor
-global.URL = jest.fn().mockImplementation((path) => ({
-  toString: () => path,
-}));
+import { setupNextServerMock, setupRequestMock } from '@/__tests__/test-utils';
 
 describe('Logout API Route', () => {
   let POST;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    setupNextServerMock();
+    setupRequestMock();
+
     jest.isolateModules(() => {
       const route = require('@/app/api/auth/logout/route');
       POST = route.POST;

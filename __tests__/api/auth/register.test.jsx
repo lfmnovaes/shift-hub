@@ -1,31 +1,18 @@
-import { registerUser } from '@/lib/auth';
+import * as authModule from '@/lib/auth';
 import { NextResponse } from 'next/server';
+import { setupNextServerMock, setupRequestMock } from '@/__tests__/test-utils';
 
-jest.mock('@/lib/auth', () => ({
-  registerUser: jest.fn(),
-}));
-
-jest.mock('next/server', () => ({
-  NextResponse: {
-    json: jest.fn().mockImplementation((data, options) => ({
-      status: options?.status || 200,
-      headers: new Map(),
-      json: () => Promise.resolve(data),
-    })),
-  },
-}));
-
-// Mock the Request constructor
-global.Request = jest.fn().mockImplementation((url, options) => ({
-  url,
-  json: () => Promise.resolve(options.body ? JSON.parse(options.body) : {}),
-}));
+jest.mock('@/lib/auth');
 
 describe('Register API Route', () => {
   let POST;
+  const { registerUser } = authModule;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    setupNextServerMock();
+    setupRequestMock();
+
     jest.isolateModules(() => {
       const route = require('@/app/api/auth/register/route');
       POST = route.POST;
@@ -33,7 +20,7 @@ describe('Register API Route', () => {
   });
 
   it('should register a user successfully', async () => {
-    registerUser.mockResolvedValueOnce({
+    jest.mocked(registerUser).mockResolvedValueOnce({
       success: true,
       user: {
         id: 1,
@@ -60,7 +47,7 @@ describe('Register API Route', () => {
   });
 
   it('should return validation errors', async () => {
-    registerUser.mockResolvedValue({
+    jest.mocked(registerUser).mockResolvedValue({
       success: false,
       error: { username: ['Username already taken'] },
     });
@@ -85,7 +72,7 @@ describe('Register API Route', () => {
   });
 
   it('should handle server errors', async () => {
-    registerUser.mockRejectedValue(new Error('Database error'));
+    jest.mocked(registerUser).mockRejectedValue(new Error('Database error'));
 
     const request = new Request('http://localhost/api/auth/register', {
       method: 'POST',

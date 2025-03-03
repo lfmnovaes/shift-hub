@@ -2,21 +2,16 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import LogoutButton from '@/components/logout-button';
 import { mockSuccess, mockError, mockPush, setupTest } from '@/__tests__/test-utils';
 
-// Mock useState to control the isLoggingOut state
 const mockSetIsLoggingOut = jest.fn();
-jest.mock('react', () => {
-  const originalReact = jest.requireActual('react');
-  return {
-    ...originalReact,
-    useState: jest.fn((initialValue) => {
-      // Only mock the isLoggingOut state
-      if (initialValue === false) {
-        return [false, mockSetIsLoggingOut];
-      }
-      return originalReact.useState(initialValue);
-    }),
-  };
-});
+jest.mock('react', () => ({
+  ...jest.requireActual('react'),
+  useState: jest.fn().mockImplementation((initialValue) => {
+    if (initialValue === false) {
+      return [false, mockSetIsLoggingOut];
+    }
+    return jest.requireActual('react').useState(initialValue);
+  }),
+}));
 
 describe('LogoutButton', () => {
   beforeEach(setupTest);

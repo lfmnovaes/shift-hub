@@ -1,22 +1,12 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import RegisterPage from '@/app/register/page';
-import { mockPush } from '@/__tests__/test-utils';
-
-jest.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: mockPush,
-  }),
-}));
-
-const mockFetch = jest.fn();
-global.fetch = mockFetch;
+import { mockPush, setupFetchMock, setupTest } from '@/__tests__/test-utils';
 
 describe('RegisterPage', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    document.body.innerHTML = ''; // Clear DOM between tests
-    mockFetch.mockResolvedValue({
+    setupTest();
+    setupFetchMock({
       ok: true,
       json: () => Promise.resolve({ user: { id: 1, username: 'testuser' } }),
     });
@@ -39,7 +29,6 @@ describe('RegisterPage', () => {
     const confirmPasswordInput = screen.getByPlaceholderText('Confirm Password');
     const submitButton = screen.getByRole('button', { name: 'Register' });
 
-    // Username validations
     await userEvent.type(usernameInput, 'ab');
     fireEvent.click(submitButton);
     expect(screen.getByText('Username must be at least 3 characters')).toBeInTheDocument();
@@ -52,7 +41,6 @@ describe('RegisterPage', () => {
     fireEvent.click(submitButton);
     expect(screen.getByText('Only letters, dash or underscore allowed')).toBeInTheDocument();
 
-    // Password validations
     await userEvent.clear(usernameInput);
     await userEvent.type(usernameInput, 'validuser');
     await userEvent.type(passwordInput, '12');
@@ -63,7 +51,6 @@ describe('RegisterPage', () => {
     fireEvent.click(submitButton);
     expect(screen.getByText('Password is required')).toBeInTheDocument();
 
-    // Confirm password validations
     await userEvent.type(passwordInput, 'password123');
     await userEvent.type(confirmPasswordInput, 'password456');
     fireEvent.click(submitButton);
@@ -79,10 +66,17 @@ describe('RegisterPage', () => {
     await userEvent.type(screen.getByPlaceholderText('Username'), 'validuser');
     await userEvent.type(screen.getByPlaceholderText('Password'), 'password123');
     await userEvent.type(screen.getByPlaceholderText('Confirm Password'), 'password123');
+
+    // Mock successful registration
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ user: { id: 1, username: 'validuser' } }),
+    });
+
     fireEvent.click(screen.getByRole('button', { name: 'Register' }));
 
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith('/api/auth/register', {
+      expect(global.fetch).toHaveBeenCalledWith('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -91,12 +85,17 @@ describe('RegisterPage', () => {
           confirmPassword: 'password123',
         }),
       });
+    });
+
+    // Check if router.push was called
+    await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith('/');
     });
   });
 
   it('shows error message on registration failure', async () => {
-    mockFetch.mockResolvedValueOnce({
+    // Mock failed registration with specific error
+    setupFetchMock({
       ok: false,
       json: () =>
         Promise.resolve({
@@ -110,14 +109,15 @@ describe('RegisterPage', () => {
     await userEvent.type(screen.getByPlaceholderText('Confirm Password'), 'password123');
     fireEvent.click(screen.getByRole('button', { name: 'Register' }));
 
+    // Check for error in toast
     await waitFor(() => {
-      expect(screen.getByText('Username already taken')).toBeInTheDocument();
+      expect(screen.getByTestId('toast-error')).toBeInTheDocument();
       expect(mockPush).not.toHaveBeenCalled();
     });
   });
 
   it('shows general error message on server error', async () => {
-    mockFetch.mockRejectedValueOnce(new Error('Network error'));
+    global.fetch.mockRejectedValueOnce(new Error('Network error'));
 
     render(<RegisterPage />);
     await userEvent.type(screen.getByPlaceholderText('Username'), 'validuser');
@@ -126,6 +126,7 @@ describe('RegisterPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Register' }));
 
     await waitFor(() => {
+      expect(screen.getByTestId('toast-error')).toBeInTheDocument();
       expect(
         screen.getByText('An unexpected error occurred. Please try again.')
       ).toBeInTheDocument();

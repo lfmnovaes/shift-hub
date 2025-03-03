@@ -1,9 +1,9 @@
 import { notFound } from 'next/navigation';
+import { setupTest } from '@/__tests__/test-utils';
 import { getCurrentUser } from '@/lib/session';
 import { db } from '@/db';
 import UserProfilePage from '@/app/user/[id]/page';
 
-// Mock dependencies
 jest.mock('next/navigation', () => ({
   notFound: jest.fn(),
 }));
@@ -27,13 +27,13 @@ jest.mock('@/db', () => ({
   },
 }));
 
-// Mock the assets
 jest.mock('@/assets', () => ({
   UserIcon: () => null,
 }));
 
 describe('UserProfilePage', () => {
   beforeEach(() => {
+    setupTest();
     jest.clearAllMocks();
   });
 
