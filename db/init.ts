@@ -2,8 +2,9 @@ import { createClient } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';
 import { eq } from 'drizzle-orm';
 import * as schema from './schema';
+import { newCompanySchema, newShiftSchema } from './validation';
+import { ZodError } from 'zod';
 
-// Sample data for companies
 const sampleCompanies = [
   {
     name: 'City General Hospital',
@@ -19,9 +20,7 @@ const sampleCompanies = [
   },
 ];
 
-// Sample data for shifts - company IDs will be set dynamically
 const createSampleShifts = (companyIds: Record<string, number>) => [
-  // Sunday, March 02, 2025
   {
     companyId: companyIds['City General Hospital'],
     date: '2025-03-02',
@@ -42,7 +41,6 @@ const createSampleShifts = (companyIds: Record<string, number>) => [
     requirements: 'Board certified in Family Medicine',
     benefits: 'Sunday differential, CME allowance',
   },
-  // Monday, March 03, 2025
   {
     companyId: companyIds['City General Hospital'],
     date: '2025-03-03',
@@ -63,7 +61,6 @@ const createSampleShifts = (companyIds: Record<string, number>) => [
     requirements: 'OT license, 2+ years experience',
     benefits: 'Flexible schedule, CEU credits',
   },
-  // Tuesday, March 04, 2025
   {
     companyId: companyIds['Riverside Medical Center'],
     date: '2025-03-04',
@@ -84,7 +81,6 @@ const createSampleShifts = (companyIds: Record<string, number>) => [
     requirements: 'PharmD, hospital experience',
     benefits: 'Evening differential, education stipend',
   },
-  // Wednesday, March 05, 2025
   {
     companyId: companyIds['Northside Health Clinic'],
     date: '2025-03-05',
@@ -105,7 +101,6 @@ const createSampleShifts = (companyIds: Record<string, number>) => [
     requirements: 'Board certified in Radiology',
     benefits: 'Remote reading options available',
   },
-  // Thursday, March 06, 2025
   {
     companyId: companyIds['City General Hospital'],
     date: '2025-03-06',
@@ -126,7 +121,6 @@ const createSampleShifts = (companyIds: Record<string, number>) => [
     requirements: 'LMHC, experience with anxiety/depression',
     benefits: 'Flexible schedule, supervision hours',
   },
-  // Friday, March 07, 2025
   {
     companyId: companyIds['Riverside Medical Center'],
     date: '2025-03-07',
@@ -147,7 +141,6 @@ const createSampleShifts = (companyIds: Record<string, number>) => [
     requirements: 'Board certified in PM&R',
     benefits: 'Research opportunities, CME allowance',
   },
-  // Saturday, March 08, 2025
   {
     companyId: companyIds['Northside Health Clinic'],
     date: '2025-03-08',
@@ -180,49 +173,63 @@ async function main() {
   const db = drizzle(client, { schema });
 
   console.log('Initializing database...');
-
-  // Seed the database with initial data
   console.log('Seeding database with sample data...');
-
-  // Insert companies and get their IDs
   console.log('Adding companies...');
   const companyIds: Record<string, number> = {};
 
   for (const company of sampleCompanies) {
-    const result = await db.insert(schema.companies).values({
-      name: company.name,
-      location: company.location,
-      createdAt: new Date(),
-    });
+    try {
+      const validatedCompany = newCompanySchema.parse(company);
 
-    // Get the ID of the inserted company
-    const companyResult = await db
-      .select({ id: schema.companies.id })
-      .from(schema.companies)
-      .where(eq(schema.companies.name, company.name))
-      .limit(1);
+      await db.insert(schema.companies).values({
+        name: validatedCompany.name,
+        location: validatedCompany.location,
+        createdAt: new Date(),
+      });
 
-    if (companyResult.length > 0) {
-      companyIds[company.name] = companyResult[0].id;
+      const companyResult = await db
+        .select({ id: schema.companies.id })
+        .from(schema.companies)
+        .where(eq(schema.companies.name, validatedCompany.name))
+        .limit(1);
+
+      if (companyResult.length > 0) {
+        companyIds[validatedCompany.name] = companyResult[0].id;
+      }
+    } catch (error) {
+      if (error instanceof ZodError) {
+        console.error(`Invalid company data: ${error.message}`);
+        continue;
+      }
+      throw error;
     }
   }
 
-  // Insert shifts using the correct company IDs
   console.log('Adding shifts...');
   const sampleShifts = createSampleShifts(companyIds);
 
   for (const shift of sampleShifts) {
-    await db.insert(schema.shifts).values({
-      companyId: shift.companyId,
-      date: shift.date,
-      hour: shift.hour,
-      position: shift.position,
-      serviceDescription: shift.serviceDescription,
-      payment: shift.payment,
-      requirements: shift.requirements,
-      benefits: shift.benefits,
-      createdAt: new Date(),
-    });
+    try {
+      const validatedShift = newShiftSchema.parse(shift);
+
+      await db.insert(schema.shifts).values({
+        companyId: validatedShift.companyId,
+        date: validatedShift.date,
+        hour: validatedShift.hour,
+        position: validatedShift.position,
+        serviceDescription: validatedShift.serviceDescription,
+        payment: validatedShift.payment,
+        requirements: validatedShift.requirements,
+        benefits: validatedShift.benefits,
+        createdAt: new Date(),
+      });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        console.error(`Invalid shift data: ${error.message}`);
+        continue;
+      }
+      throw error;
+    }
   }
 
   console.log('Database initialization completed!');

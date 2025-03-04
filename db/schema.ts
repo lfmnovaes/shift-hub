@@ -24,20 +24,19 @@ export const shifts = sqliteTable('shifts', {
   companyId: integer('company_id')
     .notNull()
     .references(() => companies.id),
-  date: text('date').notNull(), // Format: YYYY-MM-DD
-  hour: text('hour').notNull(), // Format: HH:MM - HH:MM (e.g., "08:00 - 16:00")
-  position: text('position').notNull(), // e.g., "Nurse", "Doctor", "Surgeon"
+  date: text('date').notNull(),
+  hour: text('hour').notNull(),
+  position: text('position').notNull(),
   serviceDescription: text('service_description').notNull(),
-  payment: text('payment').notNull(), // e.g., "$50/hr" or "$400"
-  requirements: text('requirements'), // Optional requirements
-  benefits: text('benefits'), // Optional benefits
-  userId: integer('user_id').references(() => users.id), // The user who picked up this shift, null if not picked
+  payment: text('payment').notNull(),
+  requirements: text('requirements'),
+  benefits: text('benefits'),
+  userId: integer('user_id').references(() => users.id),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .$defaultFn(() => new Date()),
 });
 
-// Define relations after all tables are defined
 export const usersRelations = relations(users, ({ one }) => ({
   currentShift: one(shifts, {
     fields: [users.id],

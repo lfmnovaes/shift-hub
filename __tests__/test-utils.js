@@ -49,6 +49,21 @@ export const setupFetchMock = (mockResponse = null) => {
   }
 };
 
+// Mock assets
+export const setupAssetsMock = () => {
+  jest.mock('@/assets', () => ({
+    UserIcon: () => null,
+  }));
+};
+
+// Mock session
+export const setupGetCurrentUserMock = () => {
+  jest.mock('@/lib/session', () => ({
+    //getCurrentUser: jest.fn().mockResolvedValue({ id: 2, username: 'testuser' }),
+    getCurrentUser: jest.fn(),
+  }));
+};
+
 // Common test setup
 export const setupTest = () => {
   jest.clearAllMocks();
@@ -78,79 +93,6 @@ export function setupNextServerMock() {
   }));
 }
 
-export const setupSessionMock = (mockUser = null) => {
-  // Override the implementation to eliminate the cookie error
-  jest.mock(
-    '@/lib/session',
-    () => ({
-      getCurrentUser: jest.fn(() => {
-        // Return the provided mock user or the default
-        return Promise.resolve(mockUser);
-      }),
-    }),
-    { virtual: true }
-  );
-};
-
-export const setupDBMock = (mockData = {}) => {
-  const defaultDbMock = {
-    select: jest.fn(() => ({
-      from: jest.fn(() => ({
-        leftJoin: jest.fn(() => ({
-          where: jest.fn(() => Promise.resolve([])),
-        })),
-      })),
-    })),
-  };
-
-  const dbMock = { ...defaultDbMock, ...mockData };
-
-  jest.mock('@/db', () => {
-    const originalModule = jest.requireActual('@/db');
-    return {
-      __esModule: true,
-      ...originalModule,
-      db: dbMock,
-      eq: jest
-        .fn()
-        .mockImplementation((a, b) => ({ leftField: a, rightValue: b, operation: 'eq' })),
-      and: jest.fn().mockImplementation((...conditions) => ({ conditions, operation: 'and' })),
-      or: jest.fn().mockImplementation((...conditions) => ({ conditions, operation: 'or' })),
-      isNull: jest.fn().mockImplementation((field) => ({ field, operation: 'isNull' })),
-      not: jest.fn().mockImplementation((condition) => ({ condition, operation: 'not' })),
-      gt: jest
-        .fn()
-        .mockImplementation((a, b) => ({ leftField: a, rightValue: b, operation: 'gt' })),
-      lt: jest
-        .fn()
-        .mockImplementation((a, b) => ({ leftField: a, rightValue: b, operation: 'lt' })),
-      gte: jest
-        .fn()
-        .mockImplementation((a, b) => ({ leftField: a, rightValue: b, operation: 'gte' })),
-      lte: jest
-        .fn()
-        .mockImplementation((a, b) => ({ leftField: a, rightValue: b, operation: 'lte' })),
-      like: jest
-        .fn()
-        .mockImplementation((a, b) => ({ leftField: a, rightValue: b, operation: 'like' })),
-      sql: jest.fn().mockImplementation((query) => ({ query, operation: 'sql' })),
-    };
-  });
-};
-
-export const setupAuthMock = () => {
-  jest.mock('@/lib/auth', () => {
-    const loginUserMock = jest.fn();
-    const registerUserMock = jest.fn();
-    return {
-      verifyPassword: jest.fn((plain, hashed) => plain === 'validpassword'),
-      hashPassword: jest.fn(() => 'hashedpassword'),
-      loginUser: loginUserMock,
-      registerUser: registerUserMock,
-    };
-  });
-};
-
 export const setupRequestMock = () => {
   global.Request = class Request {
     constructor(url, options = {}) {
@@ -165,7 +107,6 @@ export const setupRequestMock = () => {
     }
   };
 
-  // Also mock URL for API route tests
   global.URL = class URL {
     constructor(path, base) {
       this.path = path;
@@ -179,7 +120,6 @@ export const setupRequestMock = () => {
   };
 };
 
-// Add a simple test to make Jest happy
 describe('Test utilities', () => {
   it('exports the necessary functions', () => {
     expect(typeof mockSuccess).toBe('function');
@@ -188,6 +128,7 @@ describe('Test utilities', () => {
     expect(typeof setupToastMock).toBe('function');
     expect(typeof setupRouterMock).toBe('function');
     expect(typeof setupFetchMock).toBe('function');
+    expect(typeof setupAssetsMock).toBe('function');
     expect(typeof setupTest).toBe('function');
   });
 });

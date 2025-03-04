@@ -81,7 +81,6 @@ export default function LoginForm() {
         return;
       }
       toast.success(`Welcome back, ${data.user.username}!`);
-      console.log('Login successful:', data.user);
       router.push('/shift');
     } catch (error) {
       console.error('Login error:', error);

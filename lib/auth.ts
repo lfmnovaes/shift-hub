@@ -27,7 +27,6 @@ export const loginSchema = z.object({
   password: passwordSchema,
 });
 
-// Authentication functions
 export async function registerUser(username: string, password: string, confirmPassword: string) {
   // Validate input
   const result = registerSchema.safeParse({ username, password, confirmPassword });

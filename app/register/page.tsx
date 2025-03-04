@@ -125,12 +125,7 @@ export default function RegisterPage() {
         setIsSubmitting(false);
         return;
       }
-
-      // Registration successful
-      console.log('Registration successful:', data);
       toast.success('Registration successful! You can now log in.');
-
-      // Redirect to login page
       router.push('/');
     } catch (error) {
       console.error('Registration error:', error);

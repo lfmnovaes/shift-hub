@@ -72,7 +72,6 @@ export function Modal({ isOpen, onClose, onConfirm, type }: ModalProps) {
   );
 }
 
-// For backward compatibility - these components use the new unified modal
 export function WithdrawModal({ isOpen, onClose, onConfirm }: Omit<ModalProps, 'type'>) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} onConfirm={onConfirm} type={ModalType.WITHDRAW} />

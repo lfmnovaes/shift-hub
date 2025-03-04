@@ -12,11 +12,9 @@ async function main() {
 
   console.log('Cleaning up database...');
 
-  // Delete all shifts first (due to foreign key constraints)
   await client.execute('DELETE FROM shifts');
   console.log('Shifts table cleared');
 
-  // Delete all companies
   await client.execute('DELETE FROM companies');
   console.log('Companies table cleared');
 

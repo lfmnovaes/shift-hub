@@ -28,7 +28,7 @@ export default function ShiftActionButton({
 
     setLoading(true);
     try {
-      // Check if user already has a shift using the API
+      // Check if user already has a shift
       const userShiftsResponse = await fetch('/api/shifts/user-shifts');
       const userShiftsData = await userShiftsResponse.json();
 
@@ -37,12 +37,9 @@ export default function ShiftActionButton({
         setLoading(false);
         return;
       }
-
-      // Optimistically update UI
       setIsApplied(true);
       setIsOccupied(true);
 
-      // Apply to the shift using the API
       const response = await fetch(`/api/shifts/${shiftId}/apply`, {
         method: 'POST',
         headers: {
@@ -53,8 +50,7 @@ export default function ShiftActionButton({
       const data = await response.json();
 
       if (response.ok) {
-        // The toast will remain visible longer without page reload
-        toast.success('Successfully applied to shift!', { duration: 3000 });
+        toast.success('Successfully applied to shift!');
       } else {
         // Revert UI changes if the server request failed
         setIsApplied(false);
@@ -77,12 +73,10 @@ export default function ShiftActionButton({
 
     setLoading(true);
     try {
-      // Optimistically update UI
       setIsApplied(false);
       setIsOccupied(false);
       setShowWithdrawModal(false);
 
-      // Withdraw from the shift using the API
       const response = await fetch(`/api/shifts/${shiftId}/withdraw`, {
         method: 'POST',
         headers: {
@@ -93,7 +87,7 @@ export default function ShiftActionButton({
       const data = await response.json();
 
       if (response.ok) {
-        toast.success('Successfully withdrew from shift!', { duration: 3000 });
+        toast.success('Successfully withdrew from shift!');
       } else {
         // Revert UI changes if the server request failed
         setIsApplied(true);

@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation';
-import { setupTest } from '@/__tests__/test-utils';
 import { getCurrentUser } from '@/lib/session';
 import { db } from '@/db';
 import UserProfilePage from '@/app/user/[id]/page';
+import { setupTest } from '@/__tests__/test-utils';
 
 jest.mock('next/navigation', () => ({
   notFound: jest.fn(),
@@ -27,14 +27,9 @@ jest.mock('@/db', () => ({
   },
 }));
 
-jest.mock('@/assets', () => ({
-  UserIcon: () => null,
-}));
-
 describe('UserProfilePage', () => {
   beforeEach(() => {
     setupTest();
-    jest.clearAllMocks();
   });
 
   it('redirects if user is not logged in', async () => {

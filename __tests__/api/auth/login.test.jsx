@@ -1,6 +1,6 @@
 import * as authModule from '@/lib/auth';
 import { NextResponse } from 'next/server';
-import { setupNextServerMock, setupAuthMock, setupRequestMock } from '@/__tests__/test-utils';
+import { setupNextServerMock, setupRequestMock } from '@/__tests__/test-utils';
 
 jest.mock('@/lib/auth');
 

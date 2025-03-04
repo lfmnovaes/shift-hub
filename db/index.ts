@@ -2,6 +2,8 @@ import { createClient } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';
 import { eq } from 'drizzle-orm';
 import * as schema from './schema';
+import { usernameSchema, newUserSchema } from './validation';
+import { ZodError } from 'zod';
 
 // Determine if we're running on the server or client
 const isServer = typeof window === 'undefined';
@@ -19,34 +21,49 @@ const client = createClient({
 
 export const db = drizzle(client, { schema });
 
-// Helper functions for user management
 export async function getUserByUsername(username: string) {
-  // Ensure this only runs on the server
-  if (!isServer) {
-    throw new Error('Database operations should only be performed on the server');
-  }
-
-  const result = await db.select().from(schema.users).where(eq(schema.users.username, username));
-  return result[0] || null;
-}
-
-export async function createUser(username: string, hashedPassword: string) {
-  // Ensure this only runs on the server
   if (!isServer) {
     throw new Error('Database operations should only be performed on the server');
   }
 
   try {
+    const validatedUsername = usernameSchema.parse(username);
+    const result = await db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.username, validatedUsername));
+    return result[0] || null;
+  } catch (error) {
+    if (error instanceof ZodError) {
+      throw new Error(`Invalid username: ${error.message}`);
+    }
+    throw error;
+  }
+}
+
+export async function createUser(username: string, hashedPassword: string) {
+  if (!isServer) {
+    throw new Error('Database operations should only be performed on the server');
+  }
+
+  try {
+    const validatedInput = newUserSchema.parse({
+      username,
+      password: hashedPassword,
+    });
+
     const result = await db
       .insert(schema.users)
       .values({
-        username,
-        password: hashedPassword,
+        username: validatedInput.username,
+        password: validatedInput.password,
       })
       .returning();
     return result[0];
   } catch (error) {
-    console.error('Error creating user:', error);
+    if (error instanceof ZodError) {
+      throw new Error(`Validation error: ${error.message}`);
+    }
     return null;
   }
 }
